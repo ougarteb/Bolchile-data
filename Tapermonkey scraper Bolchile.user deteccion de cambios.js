@@ -12,7 +12,7 @@
     'use strict';
 
     // CONFIGURACIÓN
-    const WEBHOOK_URL = "https://n8n.oscarugarte.cl/webhook/bolchile-data";
+    const WEBHOOK_URL = "https://n8n.oscarugarte.cl/webhook-test/bolchile-data";
     const MINUTOS_RECARGA = 2; // <--- Cambiado a 2 minutos
 
     function enviarDatos() {
@@ -26,7 +26,7 @@
                 sitio: "Bolchile",
                 timestamp: ahora.toISOString(),
                 precios: document.body.innerText.match(/\$\d+,\d+/g) || [],
-                html_full: document.body.innerText.substring(0, 10000)
+                html_full: document.body.innerText.substring(0, 1500)
             };
 
             fetch(WEBHOOK_URL, {
@@ -42,7 +42,7 @@
         }
     }
 
-    setTimeout(enviarDatos, 15000);
+    setTimeout(enviarDatos, 5000);
 
     setTimeout(() => {
         location.reload();
