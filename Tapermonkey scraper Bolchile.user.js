@@ -15,34 +15,49 @@
     const WEBHOOK_URL = "https://n8n.oscarugarte.cl/webhook/bolchile-data";
     const MINUTOS_RECARGA = 2; // <--- Cambiado a 2 minutos
 
-    function enviarDatos() {
+    function enviarDatos(force = false) {
         const ahora = new Date();
         const hora = ahora.getHours();
 
         if (hora >= 8 && hora < 16) {
             console.log("Dentro de horario de mercado. Extrayendo...");
 
-            const payload = {
-                sitio: "Bolchile",
-                timestamp: ahora.toISOString(),
-                precios: document.body.innerText.match(/\$\d+,\d+/g) || [],
-                html_full: document.body.innerText.substring(0, 10000)
-            };
+            const precios = document.body.innerText.match(/\$\d+,\d+/g) || [];
+            const preciosString = JSON.stringify(precios);
+            const lastPrices = localStorage.getItem('last_bolchile_prices');
 
-            fetch(WEBHOOK_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'text/plain' },
-                body: JSON.stringify(payload)
-            }).then(() => {
-                console.log("🚀 Datos enviados a n8n. Próxima recarga en " + MINUTOS_RECARGA + " min.");
-            });
+            if (force || preciosString !== lastPrices) {
+                console.log(force ? "Forzando envío por recarga..." : "Cambios detectados. Enviando a n8n...");
+
+                const payload = {
+                    sitio: "Bolchile",
+                    precios: precios,
+                    html_full: document.body.innerText.substring(0, 10000)
+                };
+
+                fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify(payload)
+                }).then(() => {
+                    console.log("🚀 Datos enviados a n8n. Próxima recarga en " + MINUTOS_RECARGA + " min.");
+                    localStorage.setItem('last_bolchile_prices', preciosString);
+                });
+            } else {
+                console.log("Sin cambios en los precios. No se envía nada.");
+            }
         } else {
             console.log("Fuera de horario de mercado.");
         }
     }
 
-    setTimeout(enviarDatos, 15000);
+    // Iniciar monitoreo continuo después de 15 segundos de carga inicial
+    setTimeout(() => {
+        console.log("Iniciando monitoreo de cambios...");
+        enviarDatos(true); // Primera ejecución FORZADA
+        setInterval(() => enviarDatos(false), 15000); // Revisar cambios cada 5 segundos (no forzado)
+    }, 15000);
 
     setTimeout(() => {
         location.reload();
